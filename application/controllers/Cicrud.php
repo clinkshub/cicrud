@@ -43,8 +43,6 @@ class Cicrud extends CI_Controller
             'mdata' => $mdata,
             'fieldtypes' => $this->data['fieldtypes'],
         ));
-        //get list of fields available in table
-        //return $mdata
     }
 
     /**
@@ -53,7 +51,23 @@ class Cicrud extends CI_Controller
      */
     public function save_request()
     {
-        return true;
+        $message = array();
+        if ($this->input->post()) {
+            $postdata = $this->input->post();
+            $this->table = $postdata['tablename'];
+            //create the model
+            if ($this->check_table() && $this->model_exist() == false) {
+                $this->create_model();
+                $message['model'] = array('status' => 'true', 'message' => 'Success');
+            }
+            //create the controller
+            if ($this->check_table() && $this->controller_exist() == false) {
+                $this->create_controller();
+                $message['controller'] = array('status' => 'true', 'message' => 'Success');
+            }
+            //create the view
+        }
+        echo json_encode($this->retmessage);
     }
 
     /**
@@ -82,7 +96,7 @@ class Cicrud extends CI_Controller
             $postdata = $this->input->post();
             $this->table = $postdata['tablename'];
             if ($this->check_table() && $this->controller_exist() == false) {
-                $this->create_model();
+                $this->create_controller();
                 $this->retmessage['message'] = 'Success';
                 $this->retmessage['status'] = true;
             }
@@ -128,17 +142,59 @@ class Cicrud extends CI_Controller
     /**
      * Create Controller.
      */
-    public function create_controller($table)
+    public function create_controller()
     {
-        return true;
+        //read the template
+        $data = '';
+        $template = APPPATH.'views/cicrud/templates/controller.txt';
+        $myfile = fopen($template, 'r');
+        $data = fread($myfile, filesize($template));
+        $data = str_replace('$class_name$', $this->controller_file, $data);
+        fclose($myfile);
+        //wite the new model file
+        $file = $this->controller_path.$this->controller_file.'.php';
+        $fh = fopen($file, 'w');
+
+        if ($fh) {
+            fwrite($fh, $data);
+            fclose($fh);
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
      * Create View files.
      */
-    public function create_views($table)
+    private function create_views($ajax, $cfile)
     {
-        return true;
+        //check and create the view folder
+        $mdata = array();
+        //read the Add template
+        $data = '';
+
+        $template = APPPATH.'views/cicrud/templates/views/'.$cfile.'.txt';
+        if ($ajax == 1) {
+            $template = APPPATH.'views/cicrud/templates/views/'.$cfile.'_ajax.txt';
+        }
+
+        $myfile = fopen($template, 'r');
+        $data = fread($myfile, filesize($template));
+        fclose($myfile);
+        //wite the Add file
+        $file = $this->view_path.$cfile.'.php';
+        $fh = fopen($file, 'w');
+
+        if ($fh) {
+            fwrite($fh, $data);
+            fclose($fh);
+
+            return true;
+        }
+
+        return false;
     }
 
     /*
