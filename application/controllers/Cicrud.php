@@ -7,7 +7,7 @@ class Cicrud extends CI_Controller
         parent::__construct();
         $this->data['fieldtypes'] = array('text', 'radio', 'select', 'checkbox', 'number', 'date', 'textarea');
         $this->table = '';
-        $this->retmessage = array('status' => false, 'message' => 'Invalid Request');
+        $this->retmessage = array('status' => false, 'message' => 'Invalid Request', 'mdata' => array());
         $this->model_file = '';
         $this->controller_file = '';
         $this->view_folder = '';
@@ -22,8 +22,10 @@ class Cicrud extends CI_Controller
      */
     public function index()
     {
-        $this->data['tables'] = $this->db->query("SELECT t.TABLE_NAME AS myTables FROM INFORMATION_SCHEMA.TABLES AS t WHERE t.TABLE_SCHEMA = '".$this->db->database."'")->result_array();
+        //Check Mainmodel exist or not
+        $this->data['mainmodel'] = 0;
 
+        $this->data['tables'] = $this->db->query("SELECT t.TABLE_NAME AS myTables FROM INFORMATION_SCHEMA.TABLES AS t WHERE t.TABLE_SCHEMA = '".$this->db->database."'")->result_array();
         // get the list of tables available in DB
         $this->load->view('cicrud/Default', $this->data);
     }
@@ -34,15 +36,51 @@ class Cicrud extends CI_Controller
     public function get_attributes($table)
     {
         $this->table = $table;
-        $fields = $this->db->query('DESCRIBE '.$table)->result_array();
-        $mdata = array();
-        foreach ($fields as $ifield) {
-            $mdata[] = $this->getformfield($ifield);
+        //check table exist or not
+        if ($this->check_table()) {
+            $fields = $this->db->query('DESCRIBE '.$table)->result_array();
+            //check table is having columns or not
+            if (!empty($fields)) {
+                $mdata = array();
+                foreach ($fields as $ifield) {
+                    $mdata[] = $this->getformfield($ifield);
+                }
+                $this->retmessage['status'] = true;
+                $this->retmessage['messsage'] = 'Success';
+                $array = array();
+                $array['mdata'] = $mdata;
+                $array['fieldtypes'] = $this->data['fieldtypes'];
+                //check controller exist or not
+                $array['controller'] = true;
+
+                //check model exist or not
+                $array['model'] = true;
+
+                //check view folder exist or not
+                $array['vfolder'] = true;
+
+                //check Add exist or not
+                $array['vadd'] = true;
+
+                //check Edit exist or not
+                $array['vedit'] = true;
+
+                //check Show exist or not
+                $array['vshow'] = true;
+
+                //check All exist or not
+                $array['vall'] = true;
+
+                $this->retmessage['mdata'] = $array;
+            } else {
+                $this->retmessage['status'] = false;
+                $this->retmessage['messsage'] = 'Selected table does not have any columns.';
+            }
+        } else {
+            $this->retmessage['status'] = false;
+            $this->retmessage['messsage'] = 'Table does not exist';
         }
-        echo json_encode(array(
-            'mdata' => $mdata,
-            'fieldtypes' => $this->data['fieldtypes'],
-        ));
+        echo json_encode($this->retmessage);
     }
 
     /**
