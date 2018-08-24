@@ -7,7 +7,7 @@ class Cicrud extends CI_Controller
         parent::__construct();
         $this->data['fieldtypes'] = array('text', 'radio', 'select', 'checkbox', 'number', 'date', 'textarea');
         $this->table = '';
-        $this->retmessage = array('status' => false, 'message' => 'Invalid Request', 'mdata' => array());
+        $this->retmessage = array('status' => false, 'message' => 'Invalid Request');
         $this->model_file = '';
         $this->controller_file = '';
         $this->view_folder = '';
@@ -22,9 +22,6 @@ class Cicrud extends CI_Controller
      */
     public function index()
     {
-        //Check Mainmodel exist or not
-        $this->data['mainmodel'] = 0;
-
         $this->data['tables'] = $this->db->query("SELECT t.TABLE_NAME AS myTables FROM INFORMATION_SCHEMA.TABLES AS t WHERE t.TABLE_SCHEMA = '".$this->db->database."'")->result_array();
         // get the list of tables available in DB
         $this->load->view('cicrud/Default', $this->data);
@@ -36,50 +33,46 @@ class Cicrud extends CI_Controller
     public function get_attributes($table)
     {
         $this->table = $table;
-        //check table exist or not
-        if ($this->check_table()) {
-            $fields = $this->db->query('DESCRIBE '.$table)->result_array();
-            //check table is having columns or not
-            if (!empty($fields)) {
-                $mdata = array();
-                foreach ($fields as $ifield) {
-                    $mdata[] = $this->getformfield($ifield);
-                }
-                $this->retmessage['status'] = true;
-                $this->retmessage['messsage'] = 'Success';
-                $array = array();
-                $array['mdata'] = $mdata;
-                $array['fieldtypes'] = $this->data['fieldtypes'];
-                //check controller exist or not
-                $array['controller'] = true;
-
-                //check model exist or not
-                $array['model'] = true;
-
-                //check view folder exist or not
-                $array['vfolder'] = true;
-
-                //check Add exist or not
-                $array['vadd'] = true;
-
-                //check Edit exist or not
-                $array['vedit'] = true;
-
-                //check Show exist or not
-                $array['vshow'] = true;
-
-                //check All exist or not
-                $array['vall'] = true;
-
-                $this->retmessage['mdata'] = $array;
-            } else {
-                $this->retmessage['status'] = false;
-                $this->retmessage['messsage'] = 'Selected table does not have any columns.';
-            }
-        } else {
-            $this->retmessage['status'] = false;
-            $this->retmessage['messsage'] = 'Table does not exist';
+        $fields = $this->db->query('DESCRIBE '.$table)->result_array();
+        $mdata = array();
+        foreach ($fields as $ifield) {
+            $mdata[] = $this->getformfield($ifield);
         }
+        $this->retmessage['mdata'] = $mdata;
+        $this->retmessage['fieldtypes'] = $this->data['fieldtypes'];
+
+        $array = array();
+        $filestogenerate = array();
+        //check controller exist or not
+        $array['controller'] = $this->controller_exist();
+        if ($array['controller']) {
+            $filestogenerate[] = $this->controller_path.$this->controller_file.'.php';
+        }
+
+        //check model exist or not
+        $array['model'] = $this->model_exist();
+        if ($array['model']) {
+            $filestogenerate[] = $this->model_path.$this->model_file.'.php';
+        }
+
+        //check view folder exist or not
+        $array['vfolder'] = $this->view_exist(0, '');
+
+        //check Add exist or not
+        $array['vadd'] = $this->view_exist(1, 'Add');
+
+        //check Edit exist or not
+        $array['vedit'] = $this->view_exist(1, 'Edit');
+
+        //check Show exist or not
+        $array['vshow'] = $this->view_exist(1, 'Show');
+
+        //check All exist or not
+        $array['vall'] = $this->view_exist(1, 'All');
+
+        $this->retmessage['status'] = true;
+        $this->retmessage['checks'] = $array;
+        $this->retmessage['message'] = 'Success';
         echo json_encode($this->retmessage);
     }
 
@@ -93,11 +86,13 @@ class Cicrud extends CI_Controller
         if ($this->input->post()) {
             $postdata = $this->input->post();
             $this->table = $postdata['tablename'];
+
             //create the model
             if ($this->check_table() && $this->model_exist() == false) {
                 $this->create_model();
                 $message['model'] = array('status' => 'true', 'message' => 'Success');
             }
+
             //create the controller
             if ($this->check_table() && $this->controller_exist() == false) {
                 $this->create_controller();
@@ -166,7 +161,6 @@ class Cicrud extends CI_Controller
         //wite the new model file
         $file = $this->model_path.$this->model_file.'.php';
         $fh = fopen($file, 'w');
-
         if ($fh) {
             fwrite($fh, $data);
             fclose($fh);
@@ -192,7 +186,6 @@ class Cicrud extends CI_Controller
         //wite the new model file
         $file = $this->controller_path.$this->controller_file.'.php';
         $fh = fopen($file, 'w');
-
         if ($fh) {
             fwrite($fh, $data);
             fclose($fh);
@@ -212,19 +205,16 @@ class Cicrud extends CI_Controller
         $mdata = array();
         //read the Add template
         $data = '';
-
         $template = APPPATH.'views/cicrud/templates/views/'.$cfile.'.txt';
         if ($ajax == 1) {
             $template = APPPATH.'views/cicrud/templates/views/'.$cfile.'_ajax.txt';
         }
-
         $myfile = fopen($template, 'r');
         $data = fread($myfile, filesize($template));
         fclose($myfile);
         //wite the Add file
         $file = $this->view_path.$cfile.'.php';
         $fh = fopen($file, 'w');
-
         if ($fh) {
             fwrite($fh, $data);
             fclose($fh);
@@ -274,7 +264,6 @@ class Cicrud extends CI_Controller
             if ($column_data['Null'] == 'NO') {
                 $mdata['required'] = 'required';
             }
-
             //check for set or setnum for radio button
             if (strstr($column_data['Type'], 'set') || strstr($column_data['Type'], 'enum')) {
                 $mdata['form_field'] = 'radio';
@@ -316,7 +305,6 @@ class Cicrud extends CI_Controller
                 $ffdata .= 'required="" ';
             }
             $ffdata .= 'class="form-control" name="'.$column_data['Field'].'" >';
-
             //check for set or setnum for radio button
             if (strstr($column_data['Type'], 'set')) {
                 $setdata = $column_data['Type'];
@@ -374,8 +362,22 @@ class Cicrud extends CI_Controller
     /**
      * Check Views exist.
      */
-    private function view_exist()
+    private function view_exist($chk = 0, $fname)
     {
+        // get the folder name
+        $vfolder = $this->get_view_folder();
+        if ($chk == 0) {
+            //check for the folder
+            if (file_exists($this->view_path.$vfolder)) {
+                return true;
+            }
+        } else {
+            //check for the files
+            if (file_exists($this->view_path.$vfolder.'/'.$fname.'.php')) {
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -401,7 +403,7 @@ class Cicrud extends CI_Controller
         $table = str_replace('_', ' ', $table);
         $table = ucwords($table).'';
         $table = str_replace(' ', '', $table);
-        $this->model_file = $table;
+        $this->controller_file = $table;
 
         return true;
     }
@@ -426,6 +428,11 @@ class Cicrud extends CI_Controller
     private function get_view_folder()
     {
         $table = $this->table;
+        $table = str_replace('_', ' ', $table);
+        $table = ucwords($table).'';
+        $table = str_replace(' ', '', $table);
         $this->view_folder = $table;
+
+        return $this->view_folder;
     }
 }

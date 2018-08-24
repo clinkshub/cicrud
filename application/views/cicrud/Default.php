@@ -14,7 +14,10 @@
 		  font-size: 12px !important;
 		  padding-bottom: 2px 5px !important;
 	  }
-
+	  .anyClass {
+		height:450px;
+		overflow-y: scroll;
+	}
   </style>
 </head>
 <body> 
@@ -30,7 +33,7 @@
 			<div class="card-body">
 				<h4 class="border-bottom">DB Table Structure</h4>
 				<hr>
-				<div class="list-group">
+				<div class="list-group anyClass">
 					<?php
                         foreach ($tables as $key => $val) {
                             echo '<a href="#" class="list-group-item mytable" data-table="'.$val['myTables'].'">'.$val['myTables'].'</a>';
@@ -65,14 +68,15 @@
 								<tbody id="loadformdata"></tbody>
 							</table>
 							<div>
-								<button disabled="disabled" class="btn btn-outline-success btn-sm" id="createbtn">Create</button>
-								<button disabled="disabled" class="btn btn-outline-success btn-sm" id="editbtn">Edit</button>
-								<button disabled="disabled" class="btn btn-outline-success btn-sm" id="allbtn">All</button>
-								<button disabled="disabled" class="btn btn-outline-success btn-sm" id="showbtn">Show</button>
+								<button disabled="disabled" class="btn btn-outline-success btn-sm" id="vfolder">View Folder <span id="vfolder_err" class="text-small text-danger error_messages"></button>
+								<button disabled="disabled" class="btn btn-outline-success btn-sm" id="addbtn">Create <span id="addbtn_err" class="text-small text-danger error_messages"></span></button>
+								<button disabled="disabled" class="btn btn-outline-success btn-sm" id="editbtn">Edit <span id="editbtn_err" class="text-small text-danger error_messages"></span></button>
+								<button disabled="disabled" class="btn btn-outline-success btn-sm" id="allbtn">All <span id="allbtn_err" class="text-small text-danger error_messages"></span></button>
+								<button disabled="disabled" class="btn btn-outline-success btn-sm" id="showbtn">Show <span id="showbtn_err" class="text-small text-danger error_messages"></span></button>
 							</div>
 						</div>
 						<div class="card-footer text-right">
-							<button class="btn btn-primary btn-sm createbtns">Generate Views</button>
+							<button class="btn btn-primary btn-sm createbtns" id="save_views_request">Generate Views <span id="view_generate_btn_err" class="text-small text-danger error_messages"></span></button>
 						</div>
 					</div>
 					<div class="card mb-sm-3">
@@ -83,7 +87,7 @@
 							Controller Option Will goes here
 						</div>
 						<div class="card-footer text-right">
-							<button class="btn btn-primary btn-sm createbtns">Generate Controller</button>
+							<button class="btn btn-primary btn-sm createbtns" id="save_controller_request">Generate Controller <span id="controller_generate_btn_err" class="text-small text-danger error_messages"></span></button>
 						</div>
 					</div>
 					<div class="card mb-sm-3">
@@ -94,7 +98,7 @@
 							Model Option Will goes here
 						</div>
 						<div class="card-footer text-right">
-							<button class="btn btn-primary btn-sm createbtns" id="save_model_request">Generate Model</button>
+							<button class="btn btn-primary btn-sm createbtns" id="save_model_request">Generate Model <span id="model_generate_btn_err" class="text-small text-danger error_messages"></span></button>
 						</div>
 					</div>
 				</div>
@@ -143,9 +147,10 @@
 		})
 		.done(function(data){
 			$(".createbtns").removeAttr('disabled');
+			$(".error_messages").text('');
 			var tbodyy='';
 			var sr=0;
-			$.each(data['mdata'],function(index,element){
+			$.each(data.mdata,function(index,element){
 				sr++;
 				tbodyy+='<tr>';
 				tbodyy+='<td>'+sr+'</td>';
@@ -190,6 +195,30 @@
 				
 				tbodyy+='</tr>';
 			});
+			var checkss=data.checks;
+			if(checkss.controller==true){
+				$('#controller_generate_btn_err').text('Exist.');
+				$('#save_controller_request').attr('disabled','');
+			}
+			if(checkss.model==true){
+				$('#model_generate_btn_err').text('Exist.');
+				$('#save_model_request').attr('disabled','');
+			}
+			if(checkss.vfolder==true){
+				$('#vfolder_err').text('Exist.');
+			}
+			if(checkss.vshow==true){
+				$('#showbtn_err').text('Exist.');
+			}
+			if(checkss.vadd==true){
+				$('#addbtn_err').text('Exist.');
+			}
+			if(checkss.vall==true){
+				$('#allbtn_err').text('Exist.');
+			}
+			if(checkss.vedit==true){
+				$('#editbtn_err').text('Exist.');
+			}
 			$("#loadformdata").html(tbodyy);
 		});
 	});
